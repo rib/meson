@@ -22,7 +22,7 @@ from .mesonlib import MesonException
 from .mesonlib import default_libdir, default_libexecdir, default_prefix
 import ast
 
-version = '0.45.0.dev1'
+version = '0.45.0.glimpse-dev1'
 backendlist = ['ninja', 'vs', 'vs2010', 'vs2015', 'vs2017', 'xcode']
 
 class UserOption:
