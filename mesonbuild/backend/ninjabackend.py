@@ -1031,7 +1031,8 @@ int dummy;
         args += self.build.get_project_args(compiler, target.subproject)
         args += target.get_java_args()
         args += compiler.get_output_args(self.get_target_private_dir(target))
-        args += ['-sourcepath', os.path.join(self.build_to_src, i.curdir)]
+        curdir = target.get_subdir()
+        args += ['-sourcepath', os.path.join(self.build_to_src, curdir)]
         for i in target.include_dirs:
             for idir in i.get_incdirs():
                 args += ['-sourcepath', os.path.join(self.build_to_src, i.curdir, idir)]
