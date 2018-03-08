@@ -2502,7 +2502,16 @@ rule FORTRAN_DEP_HACK
             for dep in target.get_external_deps():
                 # Extend without reordering or de-dup to preserve `-L -l` sets
                 # https://github.com/mesonbuild/meson/issues/1718
-                commands.extend_direct(dep.get_link_args())
+                #
+                # XXX: we bypass this because it results in *extremely*
+                # bad link times (~25 seconds vs 3 seconds) when there may
+                # be lots of duplicates of the same -lfoo dependency.
+                # In practice we're not hitting the problem described here
+                # and slow link times are crippling during development
+                #
+                #commands.extend_direct(dep.get_link_args())
+
+                commands += dep.get_link_args()
             for d in target.get_dependencies():
                 if isinstance(d, build.StaticLibrary):
                     for dep in d.get_external_deps():
