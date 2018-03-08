@@ -373,9 +373,10 @@ class Environment:
                     self.coredata.user_options[name] = value
 
     @staticmethod
-    def get_gnu_compiler_defines(compiler):
+    def get_gcc_clang_compiler_defines(compiler):
         """
-        Detect GNU compiler platform type (Apple, MinGW, Unix)
+        Return a list of compiler defines (uncached) which may be used to
+        introspect features of the compiler early on.
         """
         # Arguments to output compiler pre-processor defines to stdout
         # gcc, g++, and gfortran all support these arguments
@@ -417,6 +418,22 @@ class Environment:
         elif '__CYGWIN__' in defines:
             return GCC_CYGWIN
         return GCC_STANDARD
+
+    @staticmethod
+    def get_clang_compiler_type(defines):
+        if '__APPLE__' in defines and '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' not in defines:
+            return CLANG_OSX
+        elif 'WIN32' in defines:
+            return CLANG_WIN
+        return CLANG_STANDARD
+
+    @staticmethod
+    def get_clang_version_from_defines(defines):
+        dot = '.'
+        major = defines.get('__clang_major__', '0')
+        minor = defines.get('__clang_minor__', '0')
+        patch = defines.get('__clang_patchlevel__', '0')
+        return dot.join((major, minor, patch))
 
     def _get_compilers(self, lang, evar, want_cross):
         '''
@@ -501,7 +518,7 @@ class Environment:
             version = search_version(out)
             full_version = out.split('\n', 1)[0]
             if 'Free Software Foundation' in out:
-                defines = self.get_gnu_compiler_defines(compiler)
+                defines = self.get_gcc_clang_compiler_defines(compiler)
                 if not defines:
                     popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
                     continue
@@ -510,12 +527,12 @@ class Environment:
                 cls = GnuCCompiler if lang == 'c' else GnuCPPCompiler
                 return cls(ccache + compiler, version, gtype, is_cross, exe_wrap, defines, full_version=full_version)
             if 'clang' in out:
-                if 'Apple' in out or mesonlib.for_darwin(want_cross, self):
-                    cltype = CLANG_OSX
-                elif 'windows' in out or mesonlib.for_windows(want_cross, self):
-                    cltype = CLANG_WIN
-                else:
-                    cltype = CLANG_STANDARD
+                defines = self.get_gcc_clang_compiler_defines(compiler)
+                if not defines:
+                    popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
+                    continue
+                cltype = self.get_clang_compiler_type(defines)
+                version = self.get_clang_version_from_defines(defines)
                 cls = ClangCCompiler if lang == 'c' else ClangCPPCompiler
                 return cls(ccache + compiler, version, cltype, is_cross, exe_wrap, full_version=full_version)
             if 'Microsoft' in out or 'Microsoft' in err:
@@ -562,7 +579,7 @@ class Environment:
                 full_version = out.split('\n', 1)[0]
 
                 if 'GNU Fortran' in out:
-                    defines = self.get_gnu_compiler_defines(compiler)
+                    defines = self.get_gcc_clang_compiler_defines(compiler)
                     if not defines:
                         popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
                         continue
@@ -614,7 +631,7 @@ class Environment:
                 continue
             version = search_version(out)
             if 'Free Software Foundation' in out:
-                defines = self.get_gnu_compiler_defines(compiler)
+                defines = self.get_gcc_clang_compiler_defines(compiler)
                 if not defines:
                     popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
                     continue
@@ -624,7 +641,13 @@ class Environment:
             if out.startswith('Apple LLVM'):
                 return ClangObjCCompiler(ccache + compiler, version, CLANG_OSX, is_cross, exe_wrap)
             if out.startswith('clang'):
-                return ClangObjCCompiler(ccache + compiler, version, CLANG_STANDARD, is_cross, exe_wrap)
+                defines = self.get_gcc_clang_compiler_defines(compiler)
+                if not defines:
+                    popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
+                    continue
+                cltype = self.get_gnu_compiler_type(defines)
+                version = self.get_clang_version_from_defines(defines)
+                return ClangObjCCompiler(ccache + compiler, version, cltype, is_cross, exe_wrap)
         self._handle_exceptions(popen_exceptions, compilers)
 
     def detect_objcpp_compiler(self, want_cross):
@@ -641,7 +664,7 @@ class Environment:
                 continue
             version = search_version(out)
             if 'Free Software Foundation' in out:
-                defines = self.get_gnu_compiler_defines(compiler)
+                defines = self.get_gcc_clang_compiler_defines(compiler)
                 if not defines:
                     popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
                     continue
@@ -651,7 +674,13 @@ class Environment:
             if out.startswith('Apple LLVM'):
                 return ClangObjCPPCompiler(ccache + compiler, version, CLANG_OSX, is_cross, exe_wrap)
             if out.startswith('clang'):
-                return ClangObjCPPCompiler(ccache + compiler, version, CLANG_STANDARD, is_cross, exe_wrap)
+                defines = self.get_gcc_clang_compiler_defines(compiler)
+                if not defines:
+                    popen_exceptions[' '.join(compiler)] = 'no pre-processor defines'
+                    continue
+                cltype = self.get_gnu_compiler_type(defines)
+                version = self.get_clang_version_from_defines(defines)
+                return ClangObjCPPCompiler(ccache + compiler, version, cltype, is_cross, exe_wrap)
         self._handle_exceptions(popen_exceptions, compilers)
 
     def detect_java_compiler(self):
