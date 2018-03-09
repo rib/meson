@@ -23,6 +23,7 @@ from . import mlog
 from . import compilers
 from .compilers import (
     CLANG_OSX,
+    CLANG_IOS,
     CLANG_STANDARD,
     CLANG_WIN,
     GCC_CYGWIN,
@@ -421,8 +422,11 @@ class Environment:
 
     @staticmethod
     def get_clang_compiler_type(defines):
-        if '__APPLE__' in defines and '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' not in defines:
-            return CLANG_OSX
+        if '__APPLE__' in defines:
+            if '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' in defines:
+                return CLANG_IOS
+            else:
+                return CLANG_OSX
         elif 'WIN32' in defines:
             return CLANG_WIN
         return CLANG_STANDARD

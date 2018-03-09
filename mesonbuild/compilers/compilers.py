@@ -893,7 +893,8 @@ GCC_CYGWIN = 3
 
 CLANG_STANDARD = 0
 CLANG_OSX = 1
-CLANG_WIN = 2
+CLANG_IOS = 2
+CLANG_WIN = 3
 # Possibly clang-cl?
 
 ICC_STANDARD = 0
@@ -1095,14 +1096,14 @@ class ClangCompiler:
         self.clang_type = clang_type
         self.base_options = ['b_pch', 'b_lto', 'b_pgo', 'b_sanitize', 'b_coverage',
                              'b_ndebug', 'b_staticpic', 'b_colorout']
-        if self.clang_type != CLANG_OSX:
+        if self.clang_type not in (CLANG_OSX, CLANG_IOS):
             self.base_options.append('b_lundef')
             self.base_options.append('b_asneeded')
         # All Clang backends can do assembly and LLVM IR
         self.can_compile_suffixes.update(['ll', 's'])
 
     def get_pic_args(self):
-        if self.clang_type in (CLANG_WIN, CLANG_OSX):
+        if self.clang_type in (CLANG_WIN, CLANG_OSX, CLANG_IOS):
             return [] # On Window and OS X, pic is always on.
         return ['-fPIC']
 
@@ -1113,7 +1114,7 @@ class ClangCompiler:
         return gnulike_buildtype_args[buildtype]
 
     def get_buildtype_linker_args(self, buildtype):
-        if self.clang_type == CLANG_OSX:
+        if self.clang_type in (CLANG_OSX, CLANG_IOS):
             return apple_buildtype_linker_args[buildtype]
         return gnulike_buildtype_linker_args[buildtype]
 
@@ -1129,7 +1130,7 @@ class ClangCompiler:
     def get_soname_args(self, prefix, shlib_name, suffix, path, soversion, is_shared_module):
         if self.clang_type == CLANG_STANDARD:
             gcc_type = GCC_STANDARD
-        elif self.clang_type == CLANG_OSX:
+        elif self.clang_type in (CLANG_OSX, CLANG_IOS):
             gcc_type = GCC_OSX
         elif self.clang_type == CLANG_WIN:
             gcc_type = GCC_MINGW
@@ -1152,17 +1153,17 @@ class ClangCompiler:
         # visibility to obey OS X and iOS minimum version targets with
         # -mmacosx-version-min, -miphoneos-version-min, etc.
         # https://github.com/Homebrew/homebrew-core/issues/3727
-        if self.clang_type == CLANG_OSX and version_compare(self.version, '>=8.0'):
+        if self.clang_type in (CLANG_OSX, CLANG_IOS) and version_compare(self.version, '>=8.0'):
             extra_args.append('-Wl,-no_weak_imports')
         return super().has_function(funcname, prefix, env, extra_args, dependencies)
 
     def get_std_shared_module_link_args(self):
-        if self.clang_type == CLANG_OSX:
+        if self.clang_type in (CLANG_OSX, CLANG_IOS):
             return ['-bundle', '-Wl,-undefined,dynamic_lookup']
         return ['-shared']
 
     def get_link_whole_for(self, args):
-        if self.clang_type == CLANG_OSX:
+        if self.clang_type in (CLANG_OSX, CLANG_IOS):
             result = []
             for a in args:
                 result += ['-Wl,-force_load', a]

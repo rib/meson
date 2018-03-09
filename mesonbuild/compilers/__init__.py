@@ -15,6 +15,7 @@
 # Public symbols for compilers sub-package when using 'from . import compilers'
 __all__ = [
     'CLANG_OSX',
+    'CLANG_IOS',
     'CLANG_STANDARD',
     'CLANG_WIN',
     'GCC_CYGWIN',
@@ -89,6 +90,7 @@ from .compilers import (
     GCC_CYGWIN,
     GCC_STANDARD,
     CLANG_OSX,
+    CLANG_IOS,
     CLANG_WIN,
     CLANG_STANDARD,
     ICC_OSX,
